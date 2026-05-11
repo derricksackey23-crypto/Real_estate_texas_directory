@@ -1,50 +1,62 @@
 <?php
 /**
- * Main Index Template (Fallback)
+ * Main Index Template
  */
+
 get_header();
 ?>
 
 <main class="site-main">
     <div class="container">
-        <?php if (have_posts()): ?>
-            <h1 class="section-title"><?php single_post_title(); ?></h1>
-            <div class="articles-grid">
-                <?php while (have_posts()): the_post(); ?>
-                    <article class="card">
-                        <a href="<?php the_permalink(); ?>" class="card-image">
-                            <?php if (has_post_thumbnail()): ?>
-                                <img src="<?php echo esc_url(get_the_post_thumbnail_url(get_the_ID(), 'medium')); ?>" 
-                                     alt="<?php the_title_attribute(); ?>">
-                            <?php else: ?>
-                                <img src="<?php echo retex_get_fallback_image(get_the_title()); ?>" 
-                                     alt="<?php the_title_attribute(); ?>">
-                            <?php endif; ?>
-                        </a>
-                        <div class="card-content">
-                            <h3 class="card-title">
+        <?php if (have_posts()) : ?>
+            <div class="posts-grid">
+                <?php while (have_posts()) : the_post(); ?>
+                    <article id="post-<?php the_ID(); ?>" <?php post_class('post-card'); ?>>
+                        <?php if (has_post_thumbnail()) : ?>
+                            <div class="post-thumbnail">
+                                <a href="<?php the_permalink(); ?>">
+                                    <?php the_post_thumbnail('medium'); ?>
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <div class="post-content">
+                            <h2>
                                 <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
-                            </h3>
-                            <p class="card-meta">
-                                <time datetime="<?php echo esc_attr(get_the_date('c')); ?>">
-                                    <?php echo get_the_date('F j, Y'); ?>
+                            </h2>
+                            
+                            <div class="post-meta">
+                                <time datetime="<?php echo get_the_date('c'); ?>">
+                                    <i class="far fa-calendar"></i> <?php echo get_the_date(); ?>
                                 </time>
-                            </p>
-                            <?php if (has_excerpt()): ?>
-                                <p class="card-excerpt"><?php echo get_the_excerpt(); ?></p>
-                            <?php endif; ?>
+                            </div>
+                            
+                            <div class="post-excerpt">
+                                <?php the_excerpt(); ?>
+                            </div>
+                            
+                            <a href="<?php the_permalink(); ?>" class="btn btn-read-more">
+                                <?php _e('Read More', 'real-estate-texas'); ?>
+                            </a>
                         </div>
                     </article>
                 <?php endwhile; ?>
             </div>
-            
-            <div class="text-center mt-40">
-                <?php echo paginate_links(); ?>
+
+            <div class="pagination">
+                <?php
+                the_posts_pagination(array(
+                    'mid_size' => 2,
+                    'prev_text' => __('Previous', 'real-estate-texas'),
+                    'next_text' => __('Next', 'real-estate-texas'),
+                ));
+                ?>
             </div>
-        <?php else: ?>
-            <p class="text-center">No content found.</p>
+        <?php else : ?>
+            <p><?php _e('No posts found.', 'real-estate-texas'); ?></p>
         <?php endif; ?>
     </div>
 </main>
 
-<?php get_footer(); ?>
+<?php
+get_footer();
