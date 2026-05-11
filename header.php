@@ -7,37 +7,43 @@
 <html <?php language_attributes(); ?>>
 <head>
     <meta charset="<?php bloginfo('charset'); ?>">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="<?php echo esc_url(get_template_directory_uri()); ?>/assets/logo.png" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <?php wp_head(); ?>
 </head>
+
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
 
 <header class="site-header">
-    <div class="container header-inner">
-        <div class="site-logo">
-            <a href="<?php echo esc_url(home_url('/')); ?>">
-                <img src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/logo.png" 
-                     alt="<?php bloginfo('name'); ?>" 
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-                <span class="site-logo-text" style="display:none"><?php bloginfo('name'); ?></span>
-            </a>
+    <div class="header-container">
+        <div class="site-branding">
+            <?php if (has_custom_logo()) : ?>
+                <div class="site-logo">
+                    <?php the_custom_logo(); ?>
+                </div>
+            <?php else : ?>
+                <h1>
+                    <a href="<?php echo esc_url(home_url('/')); ?>">
+                        <?php bloginfo('name'); ?>
+                    </a>
+                </h1>
+            <?php endif; ?>
         </div>
-        
-        <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
-            ☰
-        </button>
-        
-        <nav class="main-navigation" aria-label="Primary Menu">
+
+        <nav class="main-navigation">
             <?php
             wp_nav_menu(array(
                 'theme_location' => 'primary',
-                'menu_class' => '',
+                'menu_class' => 'primary-menu',
                 'container' => false,
-                'fallback_cb' => false
+                'fallback_cb' => false,
             ));
             ?>
         </nav>
+
+        <button class="mobile-menu-toggle" aria-label="<?php esc_attr_e('Toggle Menu', 'real-estate-texas'); ?>">
+            <i class="fas fa-bars"></i>
+        </button>
     </div>
 </header>
