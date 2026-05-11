@@ -12,11 +12,12 @@ $themeName = 'Real_estate_texas_directory';
 $directoryGoogleCat = 'Real estate';
 $directoryCountry = 'United State of America';
 
-// Make config available globally
-if (!defined('RETEX_DIR_CPT')) define('RETEX_DIR_CPT', $customPostKey);
-if (!defined('RETEX_DIR_TAX')) define('RETEX_DIR_TAX', $customTaxonomyKey);
-if (!defined('RETEX_DIR_CAT')) define('RETEX_DIR_CAT', $directoryGoogleCat);
-if (!defined('RETEX_DIR_COUNTRY')) define('RETEX_DIR_COUNTRY', $directoryCountry);
+// Define constants for use throughout theme
+define('RE_CUSTOM_POST_KEY', 'real_estate');
+define('RE_CUSTOM_TAXONOMY_KEY', 'state');
+define('RE_DIRECTORY_GOOGLE_CAT', 'Real estate');
+define('RE_DIRECTORY_COUNTRY', 'United State of America');
+define('RE_SITE_TITLE', 'Real estate in texas');
 
 // Include ACF Fields Configuration
 require_once get_template_directory() . '/acf-fields.php';
@@ -24,392 +25,493 @@ require_once get_template_directory() . '/acf-fields.php';
 /**
  * Theme Setup
  */
-function retex_directory_setup() {
+function re_theme_setup() {
+    // Add default posts and comments RSS feed links to head
+    add_theme_support('automatic-feed-links');
+
+    // Let WordPress manage the document title
     add_theme_support('title-tag');
+
+    // Enable support for Post Thumbnails
     add_theme_support('post-thumbnails');
-    add_theme_support('html5', array(
-        'search-form', 'comment-form', 'comment-list', 'gallery', 'caption'
-    ));
-    add_theme_support('responsive-embeds');
-    
-    register_nav_menus(array(
-        'primary' => __('Primary Menu', 'real-estate-texas-directory'),
-        'footer' => __('Footer Menu', 'real-estate-texas-directory')
-    ));
-    
     set_post_thumbnail_size(600, 400, true);
+
+    // Register navigation menus
+    register_nav_menus(array(
+        'primary' => __('Primary Menu', 'real-estate-texas'),
+        'footer' => __('Footer Menu', 'real-estate-texas'),
+    ));
+
+    // Add theme support for selective refresh for widgets
+    add_theme_support('customize-selective-refresh-widgets');
+
+    // Add support for custom logo
+    add_theme_support('custom-logo', array(
+        'height' => 50,
+        'width' => 200,
+        'flex-height' => true,
+        'flex-width' => true,
+    ));
+
+    // Add support for HTML5 markup
+    add_theme_support('html5', array(
+        'search-form',
+        'comment-form',
+        'comment-list',
+        'gallery',
+        'caption',
+    ));
 }
-add_action('after_setup_theme', 'retex_directory_setup');
+add_action('after_setup_theme', 're_theme_setup');
 
 /**
- * Register Custom Post Type: Real Estate
+ * Enqueue scripts and styles
  */
-function retex_register_cpt_real_estate() {
+function re_enqueue_scripts() {
+    // Main stylesheet
+    wp_enqueue_style('re-style', get_stylesheet_uri(), array(), '1.0.0');
+
+    // Google Fonts
+    wp_enqueue_style('re-google-fonts', 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', array(), null);
+
+    // Font Awesome for icons
+    wp_enqueue_style('re-font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', array(), '6.4.0');
+
+    // jQuery
+    wp_enqueue_script('jquery');
+
+    // Custom JavaScript
+    wp_enqueue_script('re-scripts', get_template_directory_uri() . '/js/scripts.js', array('jquery'), '1.0.0', true);
+
+    // Localize script for AJAX
+    wp_localize_script('re-scripts', 'ajax_object', array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('re_nonce')
+    ));
+}
+add_action('wp_enqueue_scripts', 're_enqueue_scripts');
+
+/**
+ * Register Custom Post Type
+ */
+function re_register_custom_post_type() {
     $labels = array(
-        'name' => _x('Real Estate Listings', 'Post Type General Name', 'real-estate-texas-directory'),
-        'singular_name' => _x('Real Estate Listing', 'Post Type Singular Name', 'real-estate-texas-directory'),
-        'menu_name' => __('Real Estate', 'real-estate-texas-directory'),
-        'add_new' => __('Add New', 'real-estate-texas-directory'),
-        'add_new_item' => __('Add New Listing', 'real-estate-texas-directory'),
-        'edit_item' => __('Edit Listing', 'real-estate-texas-directory'),
-        'view_item' => __('View Listing', 'real-estate-texas-directory'),
-        'search_items' => __('Search Listings', 'real-estate-texas-directory'),
-        'not_found' => __('No listings found', 'real-estate-texas-directory'),
-        'not_found_in_trash' => __('No listings found in Trash', 'real-estate-texas-directory'),
+        'name' => __('Real Estate Listings', 'real-estate-texas'),
+        'singular_name' => __('Real Estate', 'real-estate-texas'),
+        'menu_name' => __('Real Estate', 'real-estate-texas'),
+        'add_new' => __('Add New', 'real-estate-texas'),
+        'add_new_item' => __('Add New Listing', 'real-estate-texas'),
+        'edit_item' => __('Edit Listing', 'real-estate-texas'),
+        'new_item' => __('New Listing', 'real-estate-texas'),
+        'view_item' => __('View Listing', 'real-estate-texas'),
+        'search_items' => __('Search Listings', 'real-estate-texas'),
+        'not_found' => __('No listings found', 'real-estate-texas'),
+        'not_found_in_trash' => __('No listings found in trash', 'real-estate-texas'),
     );
-    
+
     $args = array(
-        'label' => __('Real Estate Listing', 'real-estate-texas-directory'),
         'labels' => $labels,
         'public' => true,
         'publicly_queryable' => true,
         'show_ui' => true,
         'show_in_menu' => true,
         'query_var' => true,
-        'rewrite' => array('slug' => 'real-estate', 'with_front' => false),
+        'rewrite' => array('slug' => 'listing'),
         'capability_type' => 'post',
         'has_archive' => true,
         'hierarchical' => false,
         'menu_position' => 5,
         'menu_icon' => 'dashicons-building',
-        'supports' => array('title', 'editor', 'thumbnail', 'excerpt'),
+        'supports' => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields'),
         'show_in_rest' => true,
     );
-    
-    register_post_type(RETEX_DIR_CPT, $args);
+
+    register_post_type(RE_CUSTOM_POST_KEY, $args);
 }
-add_action('init', 'retex_register_cpt_real_estate');
+add_action('init', 're_register_custom_post_type');
 
 /**
- * Register Hierarchical Custom Taxonomy: State
+ * Register Custom Taxonomy
  */
-function retex_register_taxonomy_state() {
+function re_register_custom_taxonomy() {
     $labels = array(
-        'name' => _x('States & Cities', 'Taxonomy General Name', 'real-estate-texas-directory'),
-        'singular_name' => _x('State/City', 'Taxonomy Singular Name', 'real-estate-texas-directory'),
-        'menu_name' => __('Locations', 'real-estate-texas-directory'),
-        'all_items' => __('All Locations', 'real-estate-texas-directory'),
-        'parent_item' => __('Parent State', 'real-estate-texas-directory'),
-        'parent_item_colon' => __('Parent State:', 'real-estate-texas-directory'),
-        'new_item_name' => __('New Location Name', 'real-estate-texas-directory'),
-        'add_new_item' => __('Add New Location', 'real-estate-texas-directory'),
-        'edit_item' => __('Edit Location', 'real-estate-texas-directory'),
-        'update_item' => __('Update Location', 'real-estate-texas-directory'),
-        'search_items' => __('Search Locations', 'real-estate-texas-directory'),
+        'name' => __('States', 'real-estate-texas'),
+        'singular_name' => __('State', 'real-estate-texas'),
+        'search_items' => __('Search States', 'real-estate-texas'),
+        'all_items' => __('All States', 'real-estate-texas'),
+        'parent_item' => __('Parent State', 'real-estate-texas'),
+        'parent_item_colon' => __('Parent State:', 'real-estate-texas'),
+        'edit_item' => __('Edit State', 'real-estate-texas'),
+        'update_item' => __('Update State', 'real-estate-texas'),
+        'add_new_item' => __('Add New State', 'real-estate-texas'),
+        'new_item_name' => __('New State Name', 'real-estate-texas'),
+        'menu_name' => __('States', 'real-estate-texas'),
     );
-    
+
     $args = array(
-        'labels' => $labels,
         'hierarchical' => true,
-        'public' => true,
+        'labels' => $labels,
         'show_ui' => true,
         'show_admin_column' => true,
         'query_var' => true,
-        'rewrite' => array('slug' => 'location', 'with_front' => false),
+        'rewrite' => array('slug' => 'state'),
         'show_in_rest' => true,
     );
-    
-    register_taxonomy(RETEX_DIR_TAX, array(RETEX_DIR_CPT), $args);
+
+    register_taxonomy(RE_CUSTOM_TAXONOMY_KEY, array(RE_CUSTOM_POST_KEY), $args);
 }
-add_action('init', 'retex_register_taxonomy_state');
+add_action('init', 're_register_custom_taxonomy');
 
 /**
- * Enqueue Styles and Scripts
+ * AJAX Handler for Child Taxonomies
  */
-function retex_enqueue_assets() {
-    // Main stylesheet
-    wp_enqueue_style(
-        'retex-main',
-        get_stylesheet_uri(),
-        array(),
-        wp_get_theme()->get('Version')
-    );
-    
-    // Main JavaScript
-    wp_enqueue_script(
-        'retex-main',
-        get_template_directory_uri() . '/assets/js/main.js',
-        array('jquery'),
-        wp_get_theme()->get('Version'),
-        true
-    );
-    
-    // Localize AJAX object
-    wp_localize_script('retex-main', 'ajax_object', array(
-        'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('retex_ajax_nonce')
-    ));
-}
-add_action('wp_enqueue_scripts', 'retex_enqueue_assets');
+function re_get_child_taxonomies() {
+    check_ajax_referer('re_nonce', 'nonce');
 
-/**
- * AJAX Handler: Get Child Taxonomies
- */
-function retex_ajax_get_child_taxonomies() {
-    check_ajax_referer('retex_ajax_nonce', 'nonce', false);
-    
-    $parent_id = isset($_POST['parent_id']) ? intval($_POST['parent_id']) : 0;
-    $taxonomy = isset($_POST['taxonomy']) ? sanitize_text_field($_POST['taxonomy']) : RETEX_DIR_TAX;
-    
+    $parent_id = intval($_POST['parent_id']);
+    $taxonomy = sanitize_text_field($_POST['taxonomy']);
+
     if (!$parent_id) {
-        wp_send_json_error(array('message' => 'Parent ID required'));
-        return;
+        wp_send_json_error();
     }
-    
-    $children = get_terms(array(
+
+    $terms = get_terms(array(
         'taxonomy' => $taxonomy,
         'parent' => $parent_id,
         'hide_empty' => true,
-        'orderby' => 'name',
-        'order' => 'ASC'
     ));
-    
-    if (is_wp_error($children) || empty($children)) {
-        wp_send_json_success(array());
-        return;
+
+    if (is_wp_error($terms) || empty($terms)) {
+        wp_send_json(array());
     }
-    
-    $results = array();
-    foreach ($children as $child) {
-        $results[] = array(
-            'term_id' => $child->term_id,
-            'name' => $child->name,
-            'slug' => $child->slug,
-            'link' => get_term_link($child)
+
+    $result = array();
+    foreach ($terms as $term) {
+        $result[] = array(
+            'id' => $term->term_id,
+            'name' => $term->name,
+            'link' => get_term_link($term),
         );
     }
-    
-    wp_send_json_success($results);
+
+    wp_send_json($result);
 }
-add_action('wp_ajax_get_child_taxonomies', 'retex_ajax_get_child_taxonomies');
-add_action('wp_ajax_nopriv_get_child_taxonomies', 'retex_ajax_get_child_taxonomies');
+add_action('wp_ajax_get_child_taxonomies', 're_get_child_taxonomies');
+add_action('wp_ajax_nopriv_get_child_taxonomies', 're_get_child_taxonomies');
 
 /**
- * Helper: Get Fallback Image URL
+ * Get Parent Taxonomy Link
  */
-function retex_get_fallback_image($text = null) {
-    $site_title = defined('RETEX_DIR_CAT') ? RETEX_DIR_CAT : 'Real Estate';
-    $text = $text ? rawurlencode($text) : rawurlencode($site_title);
-    return 'https://placehold.co/600x400?text=' . $text;
+function re_get_parent_taxonomy_link($term_id, $taxonomy) {
+    $term = get_term($term_id, $taxonomy);
+    
+    if (!$term || is_wp_error($term)) {
+        return '';
+    }
+
+    if ($term->parent == 0) {
+        return get_term_link($term);
+    }
+
+    $parent_term = get_term($term->parent, $taxonomy);
+    return $parent_term ? get_term_link($parent_term) : '';
 }
 
 /**
- * Helper: Parse Work Hours JSON to Human Readable
+ * Get Taxonomy Image URL
  */
-function retex_format_work_hours($json_string) {
-    if (empty($json_string)) return '';
+if (!function_exists('z_taxonomy_image_url')) {
+    function z_taxonomy_image_url($term_id = null) {
+        if (!$term_id) {
+            if (is_category()) {
+                $term_id = get_queried_object_id();
+            } elseif (is_tax()) {
+                $term = get_queried_object();
+                $term_id = $term ? $term->term_id : null;
+            }
+        }
+
+        if (!$term_id) {
+            return '';
+        }
+
+        $image_id = get_term_meta($term_id, 'taxonomy_image_id', true);
+        
+        if ($image_id) {
+            $image_url = wp_get_attachment_url($image_id);
+            return $image_url ? $image_url : '';
+        }
+
+        return '';
+    }
+}
+
+/**
+ * Helper function to get first post featured image for taxonomy
+ */
+function re_get_taxonomy_fallback_image($term_id, $taxonomy) {
+    $posts = get_posts(array(
+        'post_type' => RE_CUSTOM_POST_KEY,
+        'posts_per_page' => 1,
+        'tax_query' => array(
+            array(
+                'taxonomy' => $taxonomy,
+                'field' => 'term_id',
+                'terms' => $term_id,
+            ),
+        ),
+        'fields' => 'ids',
+    ));
+
+    if (!empty($posts)) {
+        $featured_image = get_the_post_thumbnail_url($posts[0], 'full');
+        return $featured_image ? $featured_image : '';
+    }
+
+    return '';
+}
+
+/**
+ * Parse and format work time JSON
+ */
+function re_format_work_time($json_data) {
+    if (empty($json_data)) {
+        return '';
+    }
+
+    $data = is_array($json_data) ? $json_data : json_decode($json_data, true);
     
-    $data = json_decode($json_string, true);
-    if (json_last_error() !== JSON_ERROR_NONE || empty($data)) return '';
+    if (!$data || !isset($data['timetable'])) {
+        return '';
+    }
+
+    $days = array(
+        'monday' => 'Monday',
+        'tuesday' => 'Tuesday',
+        'wednesday' => 'Wednesday',
+        'thursday' => 'Thursday',
+        'friday' => 'Friday',
+        'saturday' => 'Saturday',
+        'sunday' => 'Sunday',
+    );
+
+    $output = '<ul class="work-hours-list">';
     
-    if (!isset($data['work_hours']['timetable'])) return '';
-    
-    $timetable = $data['work_hours']['timetable'];
-    $days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    $output = '<table class="work-hours-table"><tbody>';
-    
-    foreach ($days as $day) {
-        $day_name = ucfirst($day);
-        if (isset($timetable[$day]) && is_array($timetable[$day]) && !empty($timetable[$day])) {
-            $slots = array();
-            foreach ($timetable[$day] as $slot) {
-                if (isset($slot['open'], $slot['close'])) {
+    foreach ($days as $day_key => $day_name) {
+        $hours = isset($data['timetable'][$day_key]) ? $data['timetable'][$day_key] : null;
+        
+        if (empty($hours)) {
+            $output .= '<li><span class="day">' . $day_name . '</span>: <span class="hours">Closed</span></li>';
+        } else {
+            $time_slots = array();
+            foreach ($hours as $slot) {
+                if (isset($slot['open']) && isset($slot['close'])) {
                     $open = sprintf('%02d:%02d', $slot['open']['hour'], $slot['open']['minute']);
                     $close = sprintf('%02d:%02d', $slot['close']['hour'], $slot['close']['minute']);
-                    $slots[] = $open . ' – ' . $close;
+                    $time_slots[] = $open . ' - ' . $close;
                 }
             }
-            $hours = implode(', ', $slots);
-        } else {
-            $hours = 'Closed';
-        }
-        $output .= sprintf('<tr><th>%s</th><td>%s</td></tr>', esc_html($day_name), esc_html($hours));
-    }
-    
-    $output .= '</tbody></table>';
-    return $output;
-}
-
-/**
- * Helper: Parse Rating JSON to Human Readable
- */
-function retex_format_rating($json_string) {
-    if (empty($json_string)) return '';
-    
-    $data = json_decode($json_string, true);
-    if (json_last_error() !== JSON_ERROR_NONE || empty($data)) return '';
-    
-    $value = isset($data['value']) ? floatval($data['value']) : 0;
-    $max = isset($data['rating_max']) && $data['rating_max'] ? floatval($data['rating_max']) : 5;
-    $votes = isset($data['votes_count']) ? intval($data['votes_count']) : 0;
-    
-    if ($value == 0) return '';
-    
-    $stars = '';
-    $full = floor($value);
-    $half = ($value - $full) >= 0.5 ? 1 : 0;
-    $empty = 5 - $full - $half;
-    
-    $stars .= str_repeat('★', $full);
-    if ($half) $stars .= '½';
-    $stars .= str_repeat('☆', $empty);
-    
-    return sprintf(
-        '<span class="card-rating">%s <span class="count">(%d review%s)</span></span>',
-        esc_html($stars),
-        $votes,
-        $votes === 1 ? '' : 's'
-    );
-}
-
-/**
- * Helper: Parse Place Topics JSON to Human Readable
- */
-function retex_format_place_topics($json_string) {
-    if (empty($json_string)) return '';
-    
-    $data = json_decode($json_string, true);
-    if (json_last_error() !== JSON_ERROR_NONE || empty($data)) return '';
-    
-    $output = '<div class="topics-list">';
-    foreach ($data as $topic => $count) {
-        if ($count > 0) {
-            $topic_label = ucwords(str_replace('_', ' ', $topic));
-            $output .= sprintf(
-                '<span class="topic-tag">%s <span class="count">%d</span></span>',
-                esc_html($topic_label),
-                intval($count)
-            );
-        }
-    }
-    $output .= '</div>';
-    
-    return $output;
-}
-
-/**
- * Helper: Parse Attributes JSON to Human Readable
- */
-function retex_format_attributes($json_string) {
-    if (empty($json_string)) return '';
-    
-    $data = json_decode($json_string, true);
-    if (json_last_error() !== JSON_ERROR_NONE || empty($data)) return '';
-    
-    $output = '<ul style="list-style:none;padding:0;margin:0;">';
-    
-    if (!empty($data['available_attributes'])) {
-        foreach ($data['available_attributes'] as $category => $items) {
-            if (is_array($items)) {
-                foreach ($items as $attr) {
-                    $label = ucwords(str_replace('_', ' ', str_replace('has_', '', $attr)));
-                    $output .= sprintf('<li>✓ %s</li>', esc_html($label));
-                }
-            }
-        }
-    }
-    
-    if (!empty($data['unavailable_attributes']) && is_array($data['unavailable_attributes'])) {
-        foreach ($data['unavailable_attributes'] as $attr) {
-            $label = ucwords(str_replace('_', ' ', str_replace('has_', '', $attr)));
-            $output .= sprintf('<li style="opacity:0.6">✗ %s</li>', esc_html($label));
+            $output .= '<li><span class="day">' . $day_name . '</span>: <span class="hours">' . implode(', ', $time_slots) . '</span></li>';
         }
     }
     
     $output .= '</ul>';
+    
     return $output;
 }
 
 /**
- * Helper: Parse Contact Info JSON
+ * Parse and format rating JSON
  */
-function retex_format_contact_info($json_string) {
-    if (empty($json_string)) return '';
+function re_format_rating($json_data) {
+    if (empty($json_data)) {
+        return '';
+    }
+
+    $data = is_array($json_data) ? $json_data : json_decode($json_data, true);
     
-    $data = json_decode($json_string, true);
-    if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) return '';
-    
-    $output = '<div class="contact-info">';
-    foreach ($data as $item) {
-        $type = isset($item['type']) ? $item['type'] : '';
-        $value = isset($item['value']) ? $item['value'] : '';
+    if (!$data || !isset($data['value'])) {
+        return '';
+    }
+
+    $value = $data['value'];
+    $max = isset($data['rating_max']) ? $data['rating_max'] : 5;
+    $votes = isset($data['votes_count']) ? $data['votes_count'] : 0;
+
+    $output = '<div class="rating-display">';
+    $output .= '<div class="rating-stars">';
+    for ($i = 1; $i <= 5; $i++) {
+        $full_stars = floor($value);
+        $has_half = ($value - $full_stars) >= 0.5;
         
-        if ($type === 'telephone' && !empty($value)) {
-            $output .= sprintf(
-                '<div><strong>Phone:</strong> <a href="tel:%s">%s</a></div>',
-                esc_attr($value),
-                esc_html($value)
-            );
+        if ($i <= $full_stars) {
+            $output .= '<i class="fas fa-star"></i>';
+        } elseif ($i == $full_stars + 1 && $has_half) {
+            $output .= '<i class="fas fa-star-half-alt"></i>';
+        } else {
+            $output .= '<i class="far fa-star"></i>';
         }
     }
     $output .= '</div>';
-    
+    $output .= '<span class="rating-value">' . number_format($value, 1) . '/' . $max . '</span>';
+    $output .= '<span class="rating-votes">(' . $votes . ' reviews)</span>';
+    $output .= '</div>';
+
     return $output;
 }
 
 /**
- * Breadcrumb Generator
+ * Parse and format place topics JSON
  */
-function retex_breadcrumbs() {
-    echo '<nav class="breadcrumbs" aria-label="Breadcrumb">';
-    echo '<a href="' . esc_url(home_url('/')) . '">Home</a>';
-    
-    if (is_tax(RETEX_DIR_TAX)) {
-        $term = get_queried_object();
-        if ($term->parent != 0) {
-            $parent = get_term($term->parent, RETEX_DIR_TAX);
-            if ($parent && !is_wp_error($parent)) {
-                echo ' <span>›</span> <a href="' . esc_url(get_term_link($parent)) . '">' . esc_html($parent->name) . '</a>';
-            }
-        }
-        echo ' <span>›</span> <span>' . esc_html($term->name) . '</span>';
-    } elseif (is_singular(RETEX_DIR_CPT)) {
-        echo ' <span>›</span> <a href="' . esc_url(get_post_type_archive_link(RETEX_DIR_CPT)) . '">' . RETEX_DIR_CAT . '</a>';
-        
-        $terms = get_the_terms(get_the_ID(), RETEX_DIR_TAX);
-        if ($terms && !is_wp_error($terms)) {
-            foreach ($terms as $term) {
-                if ($term->parent != 0) {
-                    $parent = get_term($term->parent, RETEX_DIR_TAX);
-                    if ($parent && !is_wp_error($parent)) {
-                        echo ' <span>›</span> <a href="' . esc_url(get_term_link($parent)) . '">' . esc_html($parent->name) . '</a>';
-                    }
-                }
-                echo ' <span>›</span> <a href="' . esc_url(get_term_link($term)) . '">' . esc_html($term->name) . '</a>';
-            }
-        }
-        echo ' <span>›</span> <span>' . get_the_title() . '</span>';
+function re_format_place_topics($json_data) {
+    if (empty($json_data)) {
+        return '';
     }
+
+    $data = is_array($json_data) ? $json_data : json_decode($json_data, true);
     
-    echo '</nav>';
+    if (!$data || empty($data)) {
+        return '';
+    }
+
+    $output = '<div class="place-topics">';
+    foreach ($data as $topic => $count) {
+        $topic_label = ucwords(str_replace('_', ' ', $topic));
+        $output .= '<span class="topic-tag">' . esc_html($topic_label) . ' (' . intval($count) . ')</span>';
+    }
+    $output .= '</div>';
+
+    return $output;
 }
 
 /**
- * Get First Post Featured Image for Taxonomy Fallback
+ * Parse and format attributes JSON
  */
-function retex_get_taxonomy_image_fallback($term_id) {
-    if (function_exists('z_taxonomy_image_url')) {
-        $img = z_taxonomy_image_url($term_id);
-        if ($img && !is_wp_error($img) && !empty($img)) {
-            return $img;
+function re_format_attributes($json_data) {
+    if (empty($json_data)) {
+        return '';
+    }
+
+    $data = is_array($json_data) ? $json_data : json_decode($json_data, true);
+    
+    if (!$data) {
+        return '';
+    }
+
+    $output = '<ul class="attributes-list">';
+    
+    if (isset($data['available_attributes']) && is_array($data['available_attributes'])) {
+        foreach ($data['available_attributes'] as $category => $attributes) {
+            if (is_array($attributes)) {
+                foreach ($attributes as $attr) {
+                    $label = re_format_attribute_name($attr);
+                    $output .= '<li><i class="fas fa-check-circle"></i> ' . esc_html($label) . '</li>';
+                }
+            }
         }
     }
     
-    // Fallback: Get first post in this taxonomy
-    $posts = get_posts(array(
-        'post_type' => RETEX_DIR_CPT,
-        'tax_query' => array(array(
-            'taxonomy' => RETEX_DIR_TAX,
-            'field' => 'term_id',
-            'terms' => $term_id
-        )),
-        'posts_per_page' => 1,
-        'fields' => 'ids'
-    ));
+    $output .= '</ul>';
+
+    return $output;
+}
+
+/**
+ * Format attribute name from snake_case to readable format
+ */
+function re_format_attribute_name($name) {
+    $name = str_replace('_', ' ', $name);
+    $name = str_replace('has ', '', $name);
+    return ucwords($name);
+}
+
+/**
+ * Parse and format contact info JSON
+ */
+function re_format_contact_info($json_data) {
+    if (empty($json_data)) {
+        return '';
+    }
+
+    $data = is_array($json_data) ? $json_data : json_decode($json_data, true);
     
-    if (!empty($posts) && has_post_thumbnail($posts[0])) {
-        return get_the_post_thumbnail_url($posts[0], 'medium');
+    if (!$data || !is_array($data)) {
+        return '';
+    }
+
+    $output = '<ul class="contact-info-list">';
+    
+    foreach ($data as $contact) {
+        if (!isset($contact['type']) || !isset($contact['value'])) {
+            continue;
+        }
+
+        $type = $contact['type'];
+        $value = $contact['value'];
+        $icon = '';
+        $label = '';
+
+        switch ($type) {
+            case 'telephone':
+                $icon = 'fa-phone';
+                $label = 'Phone';
+                $value = '<a href="tel:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
+                break;
+            case 'website':
+                $icon = 'fa-globe';
+                $label = 'Website';
+                $value = '<a href="' . esc_url($value) . '" target="_blank">' . esc_html($value) . '</a>';
+                break;
+            case 'email':
+                $icon = 'fa-envelope';
+                $label = 'Email';
+                $value = '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
+                break;
+            case 'social':
+                $icon = 'fa-share-alt';
+                $label = 'Social';
+                $value = '<a href="' . esc_url($value) . '" target="_blank">View Profile</a>';
+                break;
+            default:
+                continue;
+        }
+
+        $output .= '<li><i class="fas ' . $icon . '"></i> <strong>' . $label . ':</strong> ' . $value . '</li>';
     }
     
-    return retex_get_fallback_image();
+    $output .= '</ul>';
+
+    return $output;
 }
+
+/**
+ * Get fallback image URL
+ */
+function re_get_fallback_image($title = null) {
+    $site_title = RE_SITE_TITLE;
+    if ($title) {
+        return 'https://placehold.co/600x400?text=' . urlencode($title);
+    }
+    return 'https://placehold.co/600x400?text=' . urlencode($site_title);
+}
+
+/**
+ * Custom excerpt length
+ */
+function re_excerpt_length($length) {
+    return 20;
+}
+add_filter('excerpt_length', 're_excerpt_length', 999);
+
+/**
+ * Add taxonomy image support
+ */
+function re_taxonomy_image_init() {
+    register_meta('term', 'taxonomy_image_id', array(
+        'type' => 'integer',
+        'description' => 'Taxonomy image attachment ID',
+        'single' => true,
+        'sanitize_callback' => 'absint',
+    ));
+}
+add_action('init', 're_taxonomy_image_init');
